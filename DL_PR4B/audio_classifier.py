@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  # hide TensorFlow log noise
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")  
 os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
 
 from math import gcd
@@ -11,7 +11,7 @@ import numpy as np
 from scipy.io import wavfile
 from scipy.signal import resample_poly
 
-try:  # pick whichever TFLite runtime is installed
+try:  
     from ai_edge_litert.interpreter import Interpreter
 except ImportError:
     try:
@@ -25,7 +25,7 @@ MODEL_PATH = MODEL_DIR / "soundclassifier_with_metadata.tflite"
 LABELS_PATH = MODEL_DIR / "labels.txt"
 METADATA_PATH = MODEL_DIR / "metadata.json"
 
-SAMPLE_RATE = 44100  # Teachable Machine audio models expect 44.1 kHz
+SAMPLE_RATE = 44100  #
 
 
 def load_labels(path: Path) -> list[str]:
@@ -101,13 +101,13 @@ def main() -> int:
 
     interpreter = Interpreter(model_path=str(MODEL_PATH))
     interpreter.allocate_tensors()
-    window = int(interpreter.get_input_details()[0]["shape"][1])  # 44032
+    window = int(interpreter.get_input_details()[0]["shape"][1]) 
 
     if len(sys.argv) < 2:
         return listen(interpreter, labels, window)
 
     audio = load_audio(sys.argv[1])
-    if len(audio) < window:  # pad short clips with silence
+    if len(audio) < window:  
         audio = np.pad(audio, (0, window - len(audio)))
 
     hop = window // 2
