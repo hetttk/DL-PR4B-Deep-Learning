@@ -122,7 +122,7 @@ cd streamlit
 streamlit run app.py              # change app.py to your real file name
 ```
 
-Open **http://localhost:8501** 🎉
+Open https://dl-pr4b-deep-learning.streamlit.app/🎉
 
 ---
 
