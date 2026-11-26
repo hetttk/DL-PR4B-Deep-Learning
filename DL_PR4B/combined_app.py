@@ -1,30 +1,10 @@
-"""\
-DL_PR4B - B4 Combined Teachable Machine Multi-Modal Demo (fixed version)
 
-Components
-    (1) Image classifier : models/image/keras_model.h5 + labels.txt
-    (2) Audio classifier : models/audio/soundclassifier_with_metadata.tflite + labels.txt
-    (3) Pose detector    : MoveNet SinglePose Lightning (TensorFlow Hub) + simple rules
-
-What was fixed compared with the previous version
-    * Legacy Keras (tf_keras) is enabled BEFORE TensorFlow is imported, exactly
-      like the standalone B1 script, so the Teachable Machine .h5 loads correctly.
-    * The image model now sees the same 60% centre crop as B1 (ROI_FRAC = 0.6),
-      and the green guide on the dashboard shows exactly that region.
-    * Audio uses the raw TFLite Interpreter with 44,032 samples at 44.1 kHz,
-      exactly like the standalone B2 script (MediaPipe AudioClassifier removed).
-    * Pose rules are less trigger-happy and the label is smoothed over frames.
-
-Keys: Q / ESC = quit, S = save screenshot.
-Requires: pip install tensorflow tf_keras tensorflow_hub opencv-python
-          sounddevice scipy numpy
-"""
 from __future__ import annotations
 
 import os
 
-# These MUST be set before TensorFlow is imported.
-os.environ["TF_USE_LEGACY_KERAS"] = "1"        # load TM .h5 with Keras 2 (tf_keras)
+
+os.environ["TF_USE_LEGACY_KERAS"] = "1"      
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -44,12 +24,12 @@ import tensorflow_hub as hub
 from scipy.signal import resample_poly
 
 try:
-    import tf_keras  # noqa: F401
+    import tf_keras  
 except ImportError:
     if tf.__version__ >= "2.16":
         raise SystemExit("Missing package. Run:  pip install tf_keras")
 
-try:  # pick whichever TFLite runtime is installed (same order as B2)
+try: 
     from ai_edge_litert.interpreter import Interpreter
 except ImportError:
     try:
@@ -57,10 +37,6 @@ except ImportError:
     except ImportError:
         Interpreter = tf.lite.Interpreter
 
-
-# ---------------------------------------------------------------------------
-# Paths / settings
-# ---------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 IMAGE_MODEL_PATH = ROOT / "models" / "image" / "keras_model.h5"
 IMAGE_LABELS_PATH = ROOT / "models" / "image" / "labels.txt"
@@ -72,10 +48,10 @@ SCREENSHOT_PATH = OUTPUT_DIR / "b4_combined_screenshot.jpg"
 
 CAMERA_INDEX = 0
 IMAGE_SIZE = 224
-ROI_FRAC = 0.6                 # same as B1: hand box = 60% of frame height
-IMAGE_MIN_CONF = 0.50          # below this the dashboard says "Uncertain"
+ROI_FRAC = 0.6                 
+IMAGE_MIN_CONF = 0.50         
 IMAGE_SMOOTHING_FRAMES = 4
-TM_AUDIO_RATE = 44100          # Teachable Machine audio models expect 44.1 kHz
+TM_AUDIO_RATE = 44100          
 MOVENET_SIZE = 192
 MOVENET_URL = "https://tfhub.dev/google/movenet/singlepose/lightning/4"
 POSE_SMOOTHING_FRAMES = 5
@@ -83,7 +59,6 @@ WINDOW = "B4 | Multi-Modal Smart Monitor"
 DASH_W, DASH_H = 1280, 720
 RECORD_FPS = 20.0
 
-# OpenCV uses BGR colour tuples.
 BG = (20, 25, 36)
 PANEL = (31, 40, 55)
 TEXT = (235, 241, 248)
@@ -125,7 +100,7 @@ def load_models():
 
     print("[1/3] Loading image model...")
     image_labels = read_labels(IMAGE_LABELS_PATH)
-    try:  # same plain load as B1
+    try:  
         image_model = tf.keras.models.load_model(str(IMAGE_MODEL_PATH), compile=False)
     except Exception as exc:
         print(f"     Plain load failed ({exc}); retrying with compatibility shim...")
@@ -155,9 +130,7 @@ def load_models():
     return image_model, image_labels, audio_model, audio_labels, movenet
 
 
-# ---------------------------------------------------------------------------
-# Image model: same centre ROI as B1, MobileNet [-1, 1] input.
-# ---------------------------------------------------------------------------
+
 def centre_square_crop(frame: np.ndarray) -> tuple[np.ndarray, tuple[int, int, int, int]]:
     h, w = frame.shape[:2]
     side = int(min(h, w) * ROI_FRAC)
@@ -185,20 +158,17 @@ def predict_image(model: tf.keras.Model, frame: np.ndarray) -> np.ndarray:
     return raw
 
 
-# ---------------------------------------------------------------------------
-# MoveNet / pose decision
-# ---------------------------------------------------------------------------
+
 def run_movenet(movenet: Any, frame: np.ndarray) -> np.ndarray:
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     tensor = tf.convert_to_tensor(rgb[np.newaxis, ...], dtype=tf.uint8)
     tensor = tf.image.resize_with_pad(tensor, MOVENET_SIZE, MOVENET_SIZE)
     tensor = tf.cast(tensor, tf.int32)
     output = movenet(tensor)
-    return output["output_0"].numpy()[0, 0, :, :]  # (17, 3): y, x, score
+    return output["output_0"].numpy()[0, 0, :, :]  
 
 
 def classify_pose(kp: np.ndarray) -> tuple[str, float]:
-    # MoveNet indices: shoulders 5/6, wrists 9/10.
     ls, rs, lw, rw = kp[5], kp[6], kp[9], kp[10]
     points = [ls, rs, lw, rw]
     visibility = float(np.mean([p[2] for p in points]))
@@ -210,10 +180,10 @@ def classify_pose(kp: np.ndarray) -> tuple[str, float]:
     shoulder_width = max(abs(float(ls[1]) - float(rs[1])), 0.08)
     wrist_gap = float(np.hypot(float(lw[0]) - float(rw[0]), float(lw[1]) - float(rw[1])))
 
-    # Hands together around chest height.
+  
     if wrist_gap / shoulder_width < 0.55 and shoulder_y - 0.05 <= wrist_y <= shoulder_y + 0.48:
         return "NAMASTE", visibility
-    # Raised: a wrist clearly above its shoulder (0.12 instead of 0.05 = fewer false hits).
+    
     if float(lw[0]) < float(ls[0]) - 0.12 or float(rw[0]) < float(rs[0]) - 0.12:
         return "ARM RAISE", visibility
     return "ARM DOWN", visibility
@@ -221,7 +191,7 @@ def classify_pose(kp: np.ndarray) -> tuple[str, float]:
 
 def draw_pose_skeleton(frame: np.ndarray, kp: np.ndarray) -> None:
     h, w = frame.shape[:2]
-    side = max(h, w)                       # matches resize_with_pad geometry
+    side = max(h, w)                      
     pad_x = (side - w) / 2.0
     pad_y = (side - h) / 2.0
 
@@ -240,9 +210,7 @@ def draw_pose_skeleton(frame: np.ndarray, kp: np.ndarray) -> None:
             cv2.circle(frame, xy(point), 4, GREEN, -1, cv2.LINE_AA)
 
 
-# ---------------------------------------------------------------------------
-# Audio: same method as B2 (raw TFLite, 44,032 samples at 44.1 kHz).
-# ---------------------------------------------------------------------------
+
 def get_input_device() -> tuple[int | None, int]:
     try:
         default_device = sd.default.device[0]
@@ -264,11 +232,11 @@ def audio_worker(interpreter: Any, labels: list[str], stop_event: threading.Even
                  state: dict[str, Any], lock: threading.Lock) -> None:
     inp = interpreter.get_input_details()[0]
     out = interpreter.get_output_details()[0]
-    window = int(inp["shape"][1])          # e.g. 44032
+    window = int(inp["shape"][1])          
 
     try:
         device_id, native_rate = get_input_device()
-        # Prefer recording directly at 44.1 kHz; otherwise use the native rate and resample.
+        
         try:
             sd.check_input_settings(device=device_id, samplerate=TM_AUDIO_RATE, channels=1)
             rate = TM_AUDIO_RATE
@@ -317,9 +285,7 @@ def audio_worker(interpreter: Any, labels: list[str], stop_event: threading.Even
                 break
 
 
-# ---------------------------------------------------------------------------
-# Dashboard drawing
-# ---------------------------------------------------------------------------
+
 def put_text(img: np.ndarray, text: str, xy: tuple[int, int], scale: float = 0.6,
              color: tuple[int, int, int] = TEXT, thickness: int = 1) -> None:
     cv2.putText(img, str(text), xy, cv2.FONT_HERSHEY_SIMPLEX, scale, color,
@@ -365,7 +331,7 @@ def make_dashboard(camera_frame: np.ndarray, image_label: str, image_score: floa
     put_text(canvas, "CAMERA FEED  |  Keep your hand inside the green square",
              (vx + 18, vy + 28), 0.47, MUTED, 1)
 
-    # Green guide = exactly the region the image model sees (ROI_FRAC of the height).
+    
     crop_side = int(min(nw, nh) * ROI_FRAC)
     cx1 = px + (nw - crop_side) // 2
     cy1 = py + (nh - crop_side) // 2
@@ -463,7 +429,7 @@ def main() -> int:
         while True:
             frame = cv2.flip(frame, 1)
 
-            # Image classification runs BEFORE the skeleton is drawn on the frame.
+           
             probs = predict_image(image_model, frame)
             image_history.append(probs)
             average = np.mean(np.stack(image_history, axis=0), axis=0)
@@ -475,7 +441,7 @@ def main() -> int:
             runner_label = image_labels[second] if second != best else "-"
             runner_score = float(average[second]) if second != best else 0.0
 
-            # MoveNet pose
+           
             keypoints = run_movenet(movenet, frame)
             raw_pose, pose_quality = classify_pose(keypoints)
             pose_history.append(raw_pose)
