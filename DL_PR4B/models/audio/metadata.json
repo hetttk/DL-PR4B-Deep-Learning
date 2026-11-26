@@ -1,0 +1,23 @@
+{
+  "project_task": "B2 - Audio Project / Sound Recognition",
+  "export_format": "TensorFlow Lite",
+  "model_file": "soundclassifier_with_metadata.tflite",
+  "labels_file": "labels.txt",
+  "embedded_tflite_metadata": true,
+  "embedded_task_name": "AudioClassifier",
+  "classes": [
+    "Background Noise",
+    "clapping",
+    "knocking",
+    "snapping finger",
+    "whistle"
+  ],
+  "class_count": 5,
+  "source_archive": "converted_tflite.zip",
+  "notes": [
+    "The Teachable Machine archive supplied for this task contained a TensorFlow Lite model and labels.txt only.",
+    "The .tflite model contains embedded TFLite metadata; the embedded metadata identifies the AudioClassifier task and audio preprocessing graph.",
+    "This metadata.json is a project-side manifest created from the supplied export. It is not a standalone metadata.json exported by Teachable Machine.",
+    "No keras_model.h5 was supplied because the selected Teachable Machine audio export format was TensorFlow Lite. Do not rename the .tflite file to .h5."
+  ]
+}

@@ -1,0 +1,10 @@
+@"
+**/.venv/
+**/.venv_b4/
+**/.venv_tfjs_convert/
+**/venv/
+**/__pycache__/
+*.pyc
+.vscode/
+.idea/
+"@ | Set-Content .gitignore

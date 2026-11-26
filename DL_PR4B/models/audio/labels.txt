@@ -1,0 +1,5 @@
+0 Background Noise
+1 clapping
+2 knocking
+3 snapping finger
+4 whistle

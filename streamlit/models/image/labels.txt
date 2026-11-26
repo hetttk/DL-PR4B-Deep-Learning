@@ -1,0 +1,5 @@
+0 open -palm
+1 Thumbsup
+2 Thumbsdown
+3 fist
+4 peace

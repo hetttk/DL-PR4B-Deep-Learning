@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teachable Machine Pose Classifier</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8.3/dist/teachablemachine-pose.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 28px 16px; min-height: 100vh;
+      font-family: Arial, sans-serif; background: #101827; color: #f8fafc;
+      display: flex; justify-content: center;
+    }
+    main { width: 100%; max-width: 760px; text-align: center; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    p { color: #bdc8d8; }
+    button {
+      border: 0; border-radius: 9px; padding: 12px 24px; margin: 12px 6px;
+      font-size: 16px; font-weight: bold; cursor: pointer;
+      background: #38bdf8; color: #082f49;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    #status { min-height: 24px; color: #fbbf24; margin: 8px 0 16px; }
+    .layout { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+    canvas { width: 400px; max-width: 100%; height: auto; background: #0b1220; border-radius: 12px; }
+    #predictions { width: 260px; max-width: 100%; text-align: left; }
+    .prediction {
+      background: #1e293b; border-radius: 9px; padding: 12px; margin: 10px 0;
+    }
+    .prediction strong { display: block; margin-bottom: 8px; }
+    .bar { height: 10px; background: #334155; border-radius: 20px; overflow: hidden; }
+    .fill { height: 100%; width: 0%; background: #38bdf8; }
+    .percent { color: #cbd5e1; font-size: 13px; margin-top: 5px; }
+    .note { font-size: 13px; margin-top: 22px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Teachable Machine Pose Classifier</h1>
+  <p>Live pose detection using your original trained model</p>
+  <button id="startButton" onclick="start()">Start Webcam</button>
+  <button id="stopButton" onclick="stop()" disabled>Stop</button>
+  <div id="status">Click Start Webcam and allow camera access.</div>
+  <div class="layout">
+    <canvas id="canvas" width="400" height="400"></canvas>
+    <section id="predictions">
+      <h2>Predictions</h2>
+      <div id="predictionList">Waiting for webcam...</div>
+    </section>
+  </div>
+  <p class="note">If the camera does not start, open this folder through VS Code Live Server (localhost), not by double-clicking the HTML file.</p>
+</main>
+
+<script>
+  // These files must remain in the same folder as this HTML file.
+  const MODEL_URL = "./model.json";
+  const METADATA_URL = "./metadata.json";
+
+  let model, webcam, ctx, running = false, animationId = null;
+  const size = 400;
+  const statusEl = document.getElementById("status");
+  const startButton = document.getElementById("startButton");
+  const stopButton = document.getElementById("stopButton");
+  const canvas = document.getElementById("canvas");
+  ctx = canvas.getContext("2d");
+
+  async function start() {
+    if (running) return;
+    startButton.disabled = true;
+    statusEl.textContent = "Loading your Teachable Machine model...";
+    try {
+      model = await tmPose.load(MODEL_URL, METADATA_URL);
+      const classCount = model.getTotalClasses();
+      const list = document.getElementById("predictionList");
+      list.innerHTML = "";
+      for (let i = 0; i < classCount; i++) {
+        const item = document.createElement("div");
+        item.className = "prediction";
+        item.innerHTML = `<strong>Class ${i + 1}</strong><div class="bar"><div class="fill"></div></div><div class="percent">0%</div>`;
+        list.appendChild(item);
+      }
+
+      statusEl.textContent = "Requesting webcam permission...";
+      webcam = new tmPose.Webcam(size, size, true);
+      await webcam.setup();
+      await webcam.play();
+
+      running = true;
+      stopButton.disabled = false;
+      statusEl.textContent = "Webcam running. Perform one of your trained poses.";
+      animationId = window.requestAnimationFrame(loop);
+    } catch (error) {
+      console.error(error);
+      statusEl.textContent = "Error: " + (error.message || error) +
+        " — check internet, camera permission, and that model files are beside this HTML.";
+      startButton.disabled = false;
+      if (webcam) {
+        try { webcam.stop(); } catch (_) {}
+        webcam = null;
+      }
+    }
+  }
+
+  async function loop() {
+    if (!running) return;
+    try {
+      webcam.update();
+      const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+      const predictions = await model.predict(posenetOutput);
+
+      const items = document.querySelectorAll(".prediction");
+      predictions.forEach((p, i) => {
+        if (!items[i]) return;
+        items[i].querySelector("strong").textContent = p.className;
+        const percent = (p.probability * 100);
+        items[i].querySelector(".fill").style.width = percent.toFixed(1) + "%";
+        items[i].querySelector(".percent").textContent = percent.toFixed(1) + "%";
+      });
+
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(webcam.canvas, 0, 0, size, size);
+      if (pose) {
+        tmPose.drawKeypoints(pose.keypoints, 0.5, ctx);
+        tmPose.drawSkeleton(pose.keypoints, 0.5, ctx);
+      }
+    } catch (error) {
+      console.error(error);
+      statusEl.textContent = "Prediction error: " + (error.message || error);
+      stop();
+      return;
+    }
+    animationId = window.requestAnimationFrame(loop);
+  }
+
+  function stop() {
+    running = false;
+    if (animationId !== null) cancelAnimationFrame(animationId);
+    if (webcam) {
+      try { webcam.stop(); } catch (_) {}
+      webcam = null;
+    }
+    stopButton.disabled = true;
+    startButton.disabled = false;
+    statusEl.textContent = "Webcam stopped.";
+  }
+</script>
+</body>
+</html>

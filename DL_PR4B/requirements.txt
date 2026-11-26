@@ -1,0 +1,11 @@
+# Windows / Python 3.11 recommended. Use a fresh venv for B4.
+numpy==1.26.4
+protobuf==4.25.3
+tensorflow==2.15.1
+tf-keras==2.15.0
+tensorflow-hub==0.16.1
+mediapipe==1.2.3
+opencv-contrib-python==4.10.0.84
+sounddevice==0.5.1
+pyautogui==0.9.54
+scipy==1.15.2
