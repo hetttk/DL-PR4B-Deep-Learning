@@ -184,6 +184,9 @@ Quick preview — full gallery in [`screenshots/README.md`](screenshots/README.m
 ## 👨‍💻 Author
 
 **hetttk** — [GitHub](https://github.com/hetttk)
+streamlit link: https://dl-pr4b-deep-learning.streamlit.app/
+linkedin: https://www.linkedin.com/in/het-kapadnekar-a96aa7350 
+email: hetkapadnekar06@gmail.com
 
 <div align="center">
 
