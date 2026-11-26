@@ -17,7 +17,7 @@
 <text x="600" y="200" text-anchor="middle" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="26" fill="#e0e0ff" letter-spacing="6">SEE · HEAR · MOVE — DEEP LEARNING IN ONE APP</text>
 <text x="600" y="255" text-anchor="middle" font-family="monospace" font-size="18" fill="#9b9bd0">Image  +  Audio  +  Pose  →  Combined Intelligence</text>
 </svg>
-[Uploading banner.svg…]()
+
 
 
 # 🧠 DL-PR4B — Deep Learning Practical 4B
