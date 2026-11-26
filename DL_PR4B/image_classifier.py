@@ -1,17 +1,16 @@
 import os
 
-os.environ["TF_USE_LEGACY_KERAS"] = "1"        # load TM .h5 with Keras 2 (tf_keras)
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"      # hide the oneDNN message
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"       # hide TF info/warning logs
-# --------------------------------------------------------------------------
-import time
+os.environ["TF_USE_LEGACY_KERAS"] = "1"        
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"     
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"       
 
+import time
 import cv2
 import numpy as np
 import tensorflow as tf
 
 try:
-    import tf_keras  # noqa: F401
+    import tf_keras  
 except ImportError:
     if tf.__version__ >= "2.16":
         raise SystemExit("Missing package. Run:  pip install tf_keras")
@@ -20,7 +19,7 @@ try:
     import pyautogui
     pyautogui.FAILSAFE = False
     HAS_PYAUTOGUI = True
-except Exception as e:  # no display / missing permission
+except Exception as e:
     print(f"[warn] pyautogui unavailable ({e}); actions will only be printed.")
     HAS_PYAUTOGUI = False
 
@@ -31,13 +30,11 @@ LABELS_PATH = os.path.join(BASE_DIR, "models", "image", "labels.txt")
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 SCREENSHOT_PATH = os.path.join(OUTPUT_DIR, "b1_image_result.jpg")
 
-CONF_THRESHOLD = 0.90   # minimum confidence to trigger an action
+CONF_THRESHOLD = 0.90   
 HOLD_FRAMES = 5         # consecutive frames the gesture must be stable
 COOLDOWN_SEC = 0.7      # minimum seconds between two actions
 ROI_FRAC = 0.6          # hand box = this fraction of frame height (0 = use full frame)
 
-# Keys are class names normalised by norm(): lower-case, letters/digits only.
-# "Thumbsup" -> "thumbsup", "open -palm" -> "openpalm"
 GESTURE_ACTIONS = {
     "thumbsup": "volumeup",
     "thumbsdown": "volumedown",
